@@ -1,9 +1,11 @@
-import { createRef, useEffect, useRef } from "react";
-import Note from "./Note";
+/* eslint-disable react/prop-types */
 
-const Notes = (notes = [], setNotes = () => {}) => {
+import { createRef, useEffect, useRef } from "react";
+import Note from "../components/Note";
+
+const Notes = ({ notes = [], setNotes = () => {} }) => {
   useEffect(() => {
-    //local storage logic
+    // localstorage logic
     const savedNotes = JSON.parse(localStorage.getItem("notes")) || [];
 
     const updatedNotes = notes.map((note) => {
@@ -37,13 +39,13 @@ const Notes = (notes = [], setNotes = () => {}) => {
     const noteRef = noteRefs.current[id].current;
     const rect = noteRef.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientX - rect.top;
+    const offsetY = e.clientY - rect.top;
 
-    const startPos = note;
+    const startPos = note.position;
 
     const handleMouseMove = (e) => {
       const newX = e.clientX - offsetX;
-      const newY = e.clientX - offsetY;
+      const newY = e.clientY - offsetY;
 
       noteRef.style.left = `${newX}px`;
       noteRef.style.top = `${newY}px`;
@@ -56,8 +58,10 @@ const Notes = (notes = [], setNotes = () => {}) => {
       const finalRect = noteRef.getBoundingClientRect();
       const newPosition = { x: finalRect.left, y: finalRect.top };
 
-      if (false) {
-        // Check for overlap
+      if (checkForOverlap(id)) {
+        // check for overlap
+        noteRef.style.left = `${startPos.x}px`;
+        noteRef.style.top = `${startPos.y}px`;
       } else {
         updateNotePosition(id, newPosition);
       }
@@ -67,11 +71,31 @@ const Notes = (notes = [], setNotes = () => {}) => {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  const updateNotePosition = (id, newPosition) => {
-    const updatedNotes = notes.map((note) => {
-      note.id === id ? { ...note, position: newPosition } : note;
-    });
+  const checkForOverlap = (id) => {
+    const currentNoteRef = noteRefs.current[id].current;
+    const currentRect = currentNoteRef.getBoundingClientRect();
 
+    return notes.some((note) => {
+      if (note.id === id) return false;
+
+      const otherNoteRef = noteRefs.current[note.id].current;
+      const otherRect = otherNoteRef.getBoundingClientRect();
+
+      const overlap = !(
+        currentRect.right < otherRect.left ||
+        currentRect.left > otherRect.right ||
+        currentRect.bottom < otherRect.top ||
+        currentRect.top > otherRect.bottom
+      );
+
+      return overlap;
+    });
+  };
+
+  const updateNotePosition = (id, newPosition) => {
+    const updatedNotes = notes.map((note) =>
+      note.id === id ? { ...note, position: newPosition } : note
+    );
     setNotes(updatedNotes);
     localStorage.setItem("notes", JSON.stringify(updatedNotes));
   };
